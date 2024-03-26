@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cluster Analysis</title>
+</head>
+<body>
+  <h1>Cluster Analysis</h1>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" id="fileInput" name="file">
+    <button type="submit">Upload</button>
+  </form>
+  <div id="imageContainer"></div>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const response = await fetch('http://127.0.0.1:8000/uploadfile/', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            const blob = await response.blob();
+            const imageUrl = URL.createObjectURL(blob);
+            document.getElementById('imageContainer').innerHTML = `<h2>Cluster Analysis Image</h2><img src="${imageUrl}" alt="Cluster Analysis">`;
+          } else {
+            console.error('Failed to upload file:', response.status);
+          }
+        } catch (error) {
+          console.error('Error uploading file:', error);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
+
