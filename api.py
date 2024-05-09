@@ -1,9 +1,9 @@
 import requests
 
-url = 'http://127.0.0.1:8000/cluster'  # Update with your API URL
+url = 'http://127.0.0.1:8000/cluster'  
 
 # Prepare the CSV file
-files = {'file': open('Customer_Data.csv', 'rb')}  # Provide the path to your CSV file
+files = {'file': open('Customer_Data.csv', 'rb')}  
 
 # Send the request
 response = requests.post(url, files=files)

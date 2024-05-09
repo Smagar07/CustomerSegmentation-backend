@@ -1,48 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cluster Analysis</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Segmentation App</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="icon" href="USER.png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
 </head>
+
 <body>
-  <h1>Cluster Analysis</h1>
-  <form id="uploadForm" enctype="multipart/form-data">
-    <input type="file" id="fileInput" name="file">
-    <button type="submit">Upload</button>
-  </form>
-  <div id="imageContainer"></div>
+  <div class="container">
+    <h1>Customer Segmentation Web App</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <!-- Custom file input container -->
+      <div class="custom-file-input-container">
+        <!-- Custom file input button -->
+        <label for="fileInput" class="custom-file-input-label" id="fileInputLabel">
+          <span class="upload-icon"></span> Choose File
+        </label>
+        <!-- Actual file input -->
+        <input type="file" id="fileInput" name="file" onchange="updateFileName()">
+      </div>
+      <!-- Submit button -->
+      <button type="button" class="upload-button" onclick="uploadFile()">Upload</button>
+    </form>
+    <!-- Validation message field -->
+    <div id="validationMessage"></div>
+    <!-- Image container -->
+    <div id="imageContainer"></div>
+  </div>
+  <div id="loadingSpinner"></div>
+  <footer>
+    <div class="contain">
+      <p>&copy; 2024 Customer Segmentation App by Sagar Thapa Magar. All rights reserved.</p>
+    </div>
+  </footer>
 
   <script>
-    document.getElementById('uploadForm').addEventListener('submit', async function(event) {
-      event.preventDefault();
+    function updateFileName() {
       const fileInput = document.getElementById('fileInput');
-      const file = fileInput.files[0];
+      const fileInputLabel = document.getElementById('fileInputLabel');
+      if (fileInput.files.length > 0) {
+        fileInputLabel.textContent = 'Selected File: ' + fileInput.files[0].name;
+      } else {
+        fileInputLabel.textContent = 'Choose File';
+      }
+    }
+    async function uploadFile() {
+    document.getElementById('loadingSpinner').style.display = 'block';
+  const fileInput = document.getElementById('fileInput');
+  const file = fileInput.files[0];
+  const validationMessageField = document.getElementById('validationMessage');
+  const imageContainer = document.getElementById('imageContainer');
 
-      if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
+  // Clear previous output
+  imageContainer.innerHTML = '';
+  validationMessageField.textContent = '';
 
-        try {
-          const response = await fetch('http://127.0.0.1:8000/uploadfile/', {
-            method: 'POST',
-            body: formData
-          });
+  if (!file) {
+    // If no file is selected, display a validation message
+    validationMessageField.textContent = 'Please choose a file to upload.';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    return;
+  }
 
-          if (response.ok) {
-            const blob = await response.blob();
-            const imageUrl = URL.createObjectURL(blob);
-            document.getElementById('imageContainer').innerHTML = `<h2>Cluster Analysis Image</h2><img src="${imageUrl}" alt="Cluster Analysis">`;
-          } else {
-            console.error('Failed to upload file:', response.status);
-          }
-        } catch (error) {
-          console.error('Error uploading file:', error);
+  // Check if the file type is CSV
+  if (file.type !== 'text/csv') {
+    validationMessageField.textContent = 'Please upload a CSV file.';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    return;
+  }
+
+  // Check if the file is empty
+  if (file.size === 0) {
+    validationMessageField.textContent = 'Empty CSV file. Please upload a file with data.';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    return;
+  }
+
+  // Check if required attributes are missing
+  const requiredAttributes = ['CustomerID', 'Gender', 'Age', 'Annual Income (k$)', 'Spending Score (1-100)'];
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    const csvData = e.target.result.split('\n');
+    if (csvData.length <= 1 || csvData[0].trim() === '') {
+      // Empty CSV file
+      validationMessageField.textContent = 'Empty CSV file. Please upload a file with data.';
+      document.getElementById('loadingSpinner').style.display = 'none';
+      return;
+    }
+
+    const header = csvData[0].trim().split(',');
+    const missingAttributes = requiredAttributes.filter(attr => !header.includes(attr));
+    if (missingAttributes.length > 0) {
+      validationMessageField.textContent = `Missing attributes: ${missingAttributes.join(', ')}`;
+      document.getElementById('loadingSpinner').style.display = 'none';
+      return;
+    }
+
+    let invalidSpendingScores = [];
+    let invalidAges = [];
+    let invalidIncomes = [];
+    let rowIndex = 1;
+
+    const spendingScoreIndex = header.indexOf('Spending Score (1-100)');
+    const ageIndex = header.indexOf('Age');
+    const incomeIndex = header.indexOf('Annual Income (k$)');
+
+    for (let i = 1; i < csvData.length; i++) {
+      const row = csvData[i].trim().split(',');
+
+      // Validate spending score
+      if (row.length > spendingScoreIndex) {
+        const spendingScore = parseFloat(row[spendingScoreIndex]);
+        if (isNaN(spendingScore) || spendingScore < 1 || spendingScore > 100) {
+          invalidSpendingScores.push(rowIndex);
         }
       }
-    });
+
+      // Validate age
+      if (row.length > ageIndex) {
+        const age = parseFloat(row[ageIndex]);
+        if (isNaN(age) || age < 0) {
+          invalidAges.push(rowIndex);
+        }
+      }
+
+      // Validate annual income
+      if (row.length > incomeIndex) {
+        const income = parseFloat(row[incomeIndex]);
+        if (isNaN(income) || income < 0) {
+          invalidIncomes.push(rowIndex);
+        }
+      }
+
+      rowIndex++;
+    }
+
+    let validationErrors = [];
+
+    if (invalidSpendingScores.length > 0) {
+      validationErrors.push(`Invalid spending scores at row(s): ${invalidSpendingScores.join(', ')}. Spending score should range from 1 to 100.`);
+    }
+
+    if (invalidAges.length > 0) {
+      validationErrors.push(`Invalid ages at row(s): ${invalidAges.join(', ')}. Age should be non-negative.`);
+    }
+
+    if (invalidIncomes.length > 0) {
+      validationErrors.push(`Invalid annual incomes at row(s): ${invalidIncomes.join(', ')}. Annual income should be non-negative.`);
+    }
+
+    if (validationErrors.length > 0) {
+      validationMessageField.textContent = validationErrors.join('\n');
+      document.getElementById('loadingSpinner').style.display = 'none';
+      return;
+    }
+
+    // If all validations pass, proceed with file upload
+    const formData = new FormData();
+    formData.append('file', file);
+
+    fetch('https://customersegmentation-backend.onrender.com/uploadfile/', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => {
+        if (response.ok) {
+          return response.blob();
+        } else {
+          throw new Error('Failed to upload file: ' + response.status);
+        }
+      })
+      .then(blob => {
+        const imageUrl = URL.createObjectURL(blob);
+        imageContainer.innerHTML = `<h2>Cluster Analysis Image</h2><img src="${imageUrl}" alt="Cluster Analysis">`;
+
+        // Add download button
+        const downloadButton = document.createElement('a');
+        downloadButton.href = imageUrl;
+        downloadButton.download = 'cluster_analysis_image.png';
+        downloadButton.textContent = 'Download Image';
+        downloadButton.classList.add('downloadButton');
+        imageContainer.appendChild(downloadButton);
+
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('uploadForm').reset();
+        updateFileName();
+      })
+      .catch(error => {
+        console.error('Error uploading file:', error);
+        document.getElementById('loadingSpinner').style.display = 'none';
+      });
+  };
+
+  reader.readAsText(file);
+}
+
   </script>
 </body>
+
 </html>
-
-

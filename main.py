@@ -51,7 +51,7 @@ async def create_upload_file(file: UploadFile = File(...)):
         # Generate visualization
         palette = sns.color_palette("hls", num_clusters)
         sns.scatterplot(x='Annual Income (k$)', y='Spending Score (1-100)', hue='cluster', data=df, palette=palette, s=100, ax=axs[i//2, i%2])
-        axs[i//2, i%2].set_title(f'Clusters: {num_clusters}')
+        axs[i//2, i%2].set_title(f'k: {num_clusters}')
         axs[i//2, i%2].set_xlabel('Annual Income (k$)')
         axs[i//2, i%2].set_ylabel('Spending Score (1-100)')
         axs[i//2, i%2].legend(title='Cluster')
